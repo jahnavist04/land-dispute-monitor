@@ -1,4 +1,5 @@
 import logging
+import os
 from flask import Flask, request
 from flask_login import current_user, login_user
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
@@ -62,5 +63,10 @@ def create_app(config_name='development'):
     app.register_blueprint(clients_bp, url_prefix='/api/v1')
     app.register_blueprint(sources_bp, url_prefix='/api/v1')
     app.register_blueprint(web_bp, url_prefix='')
+
+    # Vercel has no release command, so create missing tables on cold start.
+    if os.environ.get('VERCEL'):
+        with app.app_context():
+            db.create_all()
     
     return app
