@@ -6,9 +6,10 @@ load_dotenv()
 class Config:
     """Base configuration."""
     SECRET_KEY = os.environ.get('SECRET_KEY', 'default-secret-key')
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL',
-        'sqlite:////tmp/landwatch.db' if os.environ.get('VERCEL') else 'sqlite:///land_disputes.db'
+    SQLALCHEMY_DATABASE_URI = (
+        'sqlite:////tmp/landwatch.db'
+        if os.environ.get('VERCEL')
+        else os.environ.get('DATABASE_URL', 'sqlite:///land_disputes.db')
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
