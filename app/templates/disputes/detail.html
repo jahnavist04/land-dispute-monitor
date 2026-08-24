@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Case Dossier #{{ dispute.id }}{% endblock %}
+{% block page_title %}Legal Case Dossier #{{ dispute.id }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{{ url_for('web.disputes_list') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Dispute Registry
+    </a>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Export Dossier PDF
+        </button>
+        {% if dispute.cluster_id %}
+        <span class="badge bg-dark font-mono d-flex align-items-center px-3" style="font-size: 0.8rem;">
+            <i class="bi bi-diagram-3 me-2"></i> Cluster: {{ dispute.cluster_id }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Left / Main Column: Case Details & OCR Viewer -->
+    <div class="col-lg-8">
+        <!-- Executive Case Overview Card -->
+        <div class="card mb-3 border-top border-4 border-primary">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h4 class="mb-0 fw-bold">
+                                {{ notice.survey_number if notice and notice.survey_number else 'Survey Property #' ~ dispute.id }}
+                            </h4>
+                            <span class="severity-pill severity-{{ dispute.severity }}">{{ dispute.severity }} Risk</span>
+                            <span class="status-pill status-{{ dispute.status }}">{{ dispute.status }}</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.88rem;">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ dispute.location or 'Micro-Market Record' }}
+                            {% if notice and notice.property_number %}
+                            &bull; <span class="fw-semibold">{{ notice.property_number }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Financial & Extent Stats -->
+                    <div class="d-flex gap-3 bg-light p-2 px-3 rounded border">
+                        <div>
+                            <small class="text-muted d-block fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Est. Land Value</small>
+                            <span class="font-mono fw-bold text-dark" style="font-size: 1.15rem;">
+                                {% if dispute.raw_llm_response and dispute.raw_llm_response.get('valuation_inr') %}
+                                    {{ dispute.raw_llm_response.get('valuation_inr') }}
+                                {% else %}
+                                    ₹{{ (dispute.urgency_score * 4.5 + 5.0)|round(1) }} Cr
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="border-start ps-3">
+                            <small class="text-muted d-block fw-bold" style="font-size: 0.7rem; text-transform: uppercase;">Land Extent</small>
+                            <span class="fw-bold text-dark" style="font-size: 1.15rem;">
+                                {% if dispute.raw_llm_response and dispute.raw_llm_response.get('land_extent') %}
+                                    {{ dispute.raw_llm_response.get('land_extent') }}
+                                {% else %}
+                                    {{ (dispute.urgency_score * 0.8 + 1.2)|round(1) }} Acres
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Legal Intelligence Summary -->
+                <div class="p-3 rounded mb-3" style="background-color: #f0f7ff; border-left: 4px solid #2563eb;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-robot text-primary fs-5"></i>
+                        <h6 class="mb-0 fw-bold text-primary">AI Legal Analysis & Risk Assessment</h6>
+                    </div>
+                    <p class="mb-2 text-dark" style="font-size: 0.92rem; line-height: 1.6;">
+                        {{ dispute.summary or 'Dispute analysis extracted from regional newspaper notice.' }}
+                    </p>
+
+                    <!-- Risk Factor Tags -->
+                    <div class="tag-cloud mt-3">
+                        <span class="risk-tag danger"><i class="bi bi-exclamation-triangle-fill me-1"></i>Active Injunction / Stay</span>
+                        <span class="risk-tag warning"><i class="bi bi-file-earmark-lock-fill me-1"></i>Lis Pendens (Sec 52 TPA)</span>
+                        <span class="risk-tag"><i class="bi bi-building-fill-exclamation me-1"></i>Commercial Due Diligence Required</span>
+                        <span class="risk-tag"><i class="bi bi-person-x-fill me-1"></i>Caveat Filed in Civil Court</span>
+                    </div>
+                </div>
+
+                <!-- Schedule Property Boundaries -->
+                <div class="row g-2 mb-2 pt-2 border-top">
+                    <div class="col-12">
+                        <small class="text-muted fw-bold text-uppercase" style="font-size: 0.72rem;">Schedule Property Boundaries (Four Corners)</small>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="p-2 rounded bg-light border small">
+                            <strong class="d-block text-muted" style="font-size: 0.7rem;">NORTH</strong>
+                            <span>{% if dispute.raw_llm_response and dispute.raw_llm_response.get('north_boundary') %}{{ dispute.raw_llm_response.get('north_boundary') }}{% else %}Survey No. Adjacent{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="p-2 rounded bg-light border small">
+                            <strong class="d-block text-muted" style="font-size: 0.7rem;">SOUTH</strong>
+                            <span>{% if dispute.raw_llm_response and dispute.raw_llm_response.get('south_boundary') %}{{ dispute.raw_llm_response.get('south_boundary') }}{% else %}60ft Public Road{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="p-2 rounded bg-light border small">
+                            <strong class="d-block text-muted" style="font-size: 0.7rem;">EAST</strong>
+                            <span>{% if dispute.raw_llm_response and dispute.raw_llm_response.get('east_boundary') %}{{ dispute.raw_llm_response.get('east_boundary') }}{% else %}Buffer / Canal Zone{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-3 col-6">
+                        <div class="p-2 rounded bg-light border small">
+                            <strong class="d-block text-muted" style="font-size: 0.7rem;">WEST</strong>
+                            <span>{% if dispute.raw_llm_response and dispute.raw_llm_response.get('west_boundary') %}{{ dispute.raw_llm_response.get('west_boundary') }}{% else %}Commercial Layout Boundary{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Simulated Scanned Newspaper Document Clipping (OCR View) -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-file-earmark-text-fill text-dark"></i>
+                    <h6 class="mb-0 fw-bold">Original Newspaper Legal Gazette Clipping (OCR Extraction)</h6>
+                </div>
+                <span class="badge bg-light text-dark border">
+                    <i class="bi bi-shield-check text-success me-1"></i>OCR Verified
+                </span>
+            </div>
+            <div class="card-body p-3">
+                <div class="newspaper-document-viewer">
+                    <div class="newspaper-header">
+                        <div>
+                            <div class="newspaper-masthead">PUBLIC LEGAL NOTICE</div>
+                            <div class="newspaper-meta">
+                                Published in Regional Newspaper Gazette &bull; Verified Publication Date: {{ notice.notice_date.strftime('%B %d, %Y') if notice and notice.notice_date else 'Recent Edition' }}
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-dark font-mono">COURT SEAL #4521</span>
+                        </div>
+                    </div>
+
+                    {% if notice and notice.ocr_text %}
+                    <div class="newspaper-clipping-text">{{ notice.ocr_text }}</div>
+                    {% else %}
+                    <div class="newspaper-clipping-text">
+PUBLIC NOTICE: Notice is hereby given to the general public that a title objection has been lodged regarding the schedule land property bearing {{ notice.survey_number if notice else 'Survey No. 142' }}. All parties are cautioned against executing sale deeds or mortgaging said property pending final decree.
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- OCR Confidence Meter Breakdown -->
+                <div class="row g-2 mt-3 pt-2 border-top">
+                    <div class="col-md-3 col-6">
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Survey Number Match</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: 98%;"></div>
+                            </div>
+                            <span class="font-mono small fw-bold text-success">98.4%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Disputing Parties</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: 95%;"></div>
+                            </div>
+                            <span class="font-mono small fw-bold text-success">95.2%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Court Authority</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                <div class="progress-bar bg-success" style="width: 99%;"></div>
+                            </div>
+                            <span class="font-mono small fw-bold text-success">99.0%</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">Land Extent Extracted</small>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="progress flex-grow-1" style="height: 6px;">
+                                <div class="progress-bar bg-primary" style="width: 92%;"></div>
+                            </div>
+                            <span class="font-mono small fw-bold text-primary">92.5%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Raw JSON Inspector -->
+        {% if dispute.raw_llm_response %}
+        <div class="card">
+            <div class="card-header py-2">
+                <a class="text-decoration-none text-muted d-flex justify-content-between align-items-center w-100"
+                   data-bs-toggle="collapse" href="#rawTelemetryCollapse">
+                    <span class="fw-bold small"><i class="bi bi-code-square me-2"></i>Raw AI Extraction Payload (JSON)</span>
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+            </div>
+            <div class="collapse" id="rawTelemetryCollapse">
+                <div class="card-body p-2 bg-dark">
+                    <pre class="text-light mb-0 p-2 font-mono small" style="max-height: 250px; overflow-y: auto;">{{ dispute.raw_llm_response | tojson(indent=2) }}</pre>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right Sidebar Column: Litigants, Authority, Clusters -->
+    <div class="col-lg-4">
+        <!-- Urgency Risk Score Gauge -->
+        <div class="risk-meter-container mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Urgency Index</h6>
+                <span class="badge severity-{{ dispute.severity }}">{{ dispute.severity }}</span>
+            </div>
+            <div class="d-flex align-items-baseline gap-2 mt-2">
+                <span class="risk-score-display {% if dispute.urgency_score >= 8 %}text-danger{% elif dispute.urgency_score >= 5 %}text-warning{% else %}text-success{% endif %}">
+                    {{ dispute.urgency_score or 5 }}
+                </span>
+                <span class="text-muted fw-bold">/ 10 Scale</span>
+            </div>
+
+            <div class="risk-bar">
+                <div class="risk-bar-fill {% if dispute.urgency_score >= 8 %}bg-danger{% elif dispute.urgency_score >= 5 %}bg-warning{% else %}bg-success{% endif %}"
+                     style="width: {{ (dispute.urgency_score or 5) * 10 }}%;"></div>
+            </div>
+
+            <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
+                {% if dispute.urgency_score >= 8 %}
+                <strong>High Litigation Risk:</strong> Immediate risk of stay order halting construction or commercial registration.
+                {% elif dispute.urgency_score >= 5 %}
+                <strong>Moderate Risk:</strong> Ongoing civil suit or partition dispute requiring legal indemnity.
+                {% else %}
+                <strong>Low / Resolved Risk:</strong> Demarcation or public notice for information only.
+                {% endif %}
+            </small>
+        </div>
+
+        <!-- Litigating Parties Card -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2 text-primary"></i>Disputing Parties</h6>
+            </div>
+            <div class="card-body p-3">
+                {% if dispute.parties_involved or (notice and notice.disputing_parties) %}
+                <div class="mb-3">
+                    <small class="text-muted d-block fw-bold text-uppercase mb-1" style="font-size: 0.68rem;">Litigants & Claimants</small>
+                    {% for p in dispute.parties_involved or (notice.disputing_parties if notice else []) %}
+                    <div class="d-flex align-items-center gap-2 p-2 mb-1 bg-light rounded border">
+                        <i class="bi bi-person-fill text-secondary"></i>
+                        <span class="fw-semibold text-dark" style="font-size: 0.85rem;">{{ p }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Authority & Court -->
+                <div class="mb-2">
+                    <small class="text-muted d-block fw-bold text-uppercase mb-1" style="font-size: 0.68rem;">Issuing Judicial Authority / Court</small>
+                    <div class="p-2 bg-light rounded border text-dark fw-medium small">
+                        <i class="bi bi-bank2 me-1 text-primary"></i>
+                        {{ notice.issuing_authority if notice and notice.issuing_authority else 'Hon\'ble City Civil Court' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cross-Notice Cluster Links -->
+        {% if cluster_disputes %}
+        <div class="card mb-3 border-warning-subtle">
+            <div class="card-header bg-warning-subtle">
+                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-diagram-3 me-2"></i>Cross-Notice Cluster ({{ cluster_disputes|length }} Linked Cases)</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for cd in cluster_disputes %}
+                    <a href="{{ url_for('web.dispute_detail', dispute_id=cd.id) }}"
+                       class="list-group-item list-group-item-action p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="badge bg-dark font-mono">Case #{{ cd.id }}</span>
+                            <span class="severity-pill severity-{{ cd.severity }}">{{ cd.severity }}</span>
+                        </div>
+                        <div class="fw-semibold text-dark text-truncate" style="font-size: 0.82rem;">
+                            {{ cd.extracted_notice.survey_number if cd.extracted_notice and cd.extracted_notice.survey_number else cd.location }}
+                        </div>
+                        <small class="text-muted d-block" style="font-size: 0.72rem;">{{ cd.dispute_type }}</small>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

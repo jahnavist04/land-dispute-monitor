@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: land_dispute_web
+    command: gunicorn --bind 0.0.0.0:5000 wsgi:app --workers 2 --timeout 120
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=prod-secret-key-change-in-production
+      - DATABASE_URL=postgresql://dispute_user:dispute_pass@postgres:5432/land_disputes
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build: .
+    container_name: land_dispute_worker
+    command: celery -A app.extensions.celery worker --loglevel=info -c 2
+    environment:
+      - DATABASE_URL=postgresql://dispute_user:dispute_pass@postgres:5432/land_disputes
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4o}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  beat:
+    build: .
+    container_name: land_dispute_beat
+    command: celery -A app.extensions.celery beat --loglevel=info --config=celeryconfig
+    environment:
+      - DATABASE_URL=postgresql://dispute_user:dispute_pass@postgres:5432/land_disputes
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: land_dispute_db
+    environment:
+      - POSTGRES_DB=land_disputes
+      - POSTGRES_USER=dispute_user
+      - POSTGRES_PASSWORD=dispute_pass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: land_dispute_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

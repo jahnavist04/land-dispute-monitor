@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Newspaper Feeds & Acquisition{% endblock %}
+{% block page_title %}Newspaper Legal Notice Feeds{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+            Monitored regional gazettes, digital epapers, and classifieds for automated OCR ingestion.
+        </p>
+    </div>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSourceModal">
+        <i class="bi bi-plus-lg me-1"></i> Register Newspaper Feed
+    </button>
+</div>
+
+<!-- Sources Grid -->
+<div class="row g-3">
+    {% for source in sources %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 {{ 'border-secondary opacity-75' if not source.is_active }}">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="card-title fw-bold mb-0 text-dark">
+                        <i class="bi bi-newspaper text-primary me-2"></i>
+                        {{ source.name }}
+                    </h6>
+                    <span class="badge {{ 'bg-success-subtle text-success border border-success-subtle' if source.is_active else 'bg-secondary-subtle text-secondary border' }}">
+                        {{ 'Active Feed' if source.is_active else 'Paused' }}
+                    </span>
+                </div>
+
+                <div class="small text-muted text-truncate font-mono mb-3" title="{{ source.base_url }}" style="font-size: 0.78rem;">
+                    <i class="bi bi-link-45deg me-1"></i>{{ source.base_url }}
+                </div>
+
+                <div class="row g-2 mb-3 bg-light p-2 rounded border">
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size: 0.7rem; text-transform: uppercase;">Media Format</small>
+                        <span class="badge bg-dark font-mono text-uppercase" style="font-size: 0.72rem;">{{ source.source_type }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size: 0.7rem; text-transform: uppercase;">Sync Interval</small>
+                        <span class="small fw-semibold text-dark">Every {{ source.scrape_frequency_minutes }}m</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center" style="font-size: 0.75rem;">
+                    <span class="text-muted">
+                        <i class="bi bi-clock-history me-1"></i>
+                        {% if source.last_scraped_at %}
+                        Last Scraped: {{ source.last_scraped_at.strftime('%b %d, %H:%M') }}
+                        {% else %}
+                        Never Scraped
+                        {% endif %}
+                    </span>
+                    <span class="text-success fw-bold"><i class="bi bi-check2-all"></i> Healthy</span>
+                </div>
+            </div>
+
+            <div class="card-footer bg-transparent border-top d-flex gap-2 p-3">
+                <form method="POST" action="{{ url_for('web.toggle_source', source_id=source.id) }}" class="flex-fill">
+                    <button type="submit" class="btn btn-sm w-100 {{ 'btn-outline-warning' if source.is_active else 'btn-outline-success' }}">
+                        <i class="bi {{ 'bi-pause-fill' if source.is_active else 'bi-play-fill' }}"></i>
+                        {{ 'Pause Ingestion' if source.is_active else 'Resume Ingestion' }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('web.delete_source', source_id=source.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Deactivate this newspaper source?')" title="Deactivate Source">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal: Add Source -->
+<div class="modal fade" id="addSourceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('web.add_source') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Register Newspaper Source</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Publication Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required
+                               placeholder="e.g. Deccan Herald (Bengaluru Edition)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Notice Listing URL <span class="text-danger">*</span></label>
+                        <input type="url" name="base_url" class="form-control" required
+                               placeholder="https://www.deccanherald.com/notices">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Source Format</label>
+                            <select name="source_type" class="form-select">
+                                <option value="html">HTML Web Articles</option>
+                                <option value="pdf">Scanned PDF Gazette</option>
+                                <option value="image">Newspaper Image / ePaper</option>
+                                <option value="mixed">Mixed Multimodal</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Scrape Interval (min)</label>
+                            <input type="number" name="scrape_frequency_minutes" class="form-control"
+                                   value="60" min="5" max="1440">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">CSS Selector for Legal Notices (Optional)</label>
+                        <input type="text" name="article_selector" class="form-control font-mono small"
+                               placeholder=".public-notices a, .classifieds a">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-check-lg me-1"></i> Register Source
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

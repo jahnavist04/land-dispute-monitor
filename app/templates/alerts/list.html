@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Alert Center{% endblock %}
+{% block page_title %}Real-Time Alert Center{% endblock %}
+
+{% block content %}
+<!-- Filter Pills & Bulk Actions -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="btn-group btn-group-sm">
+        <a href="{{ url_for('web.alerts_list') }}"
+           class="btn {{ 'btn-primary' if not read_filter else 'btn-outline-primary' }}">
+            All Notifications ({{ pagination.total }})
+        </a>
+        <a href="{{ url_for('web.alerts_list', read='unread') }}"
+           class="btn {{ 'btn-primary' if read_filter == 'unread' else 'btn-outline-primary' }}">
+            Unread Only
+        </a>
+        <a href="{{ url_for('web.alerts_list', read='read') }}"
+           class="btn {{ 'btn-primary' if read_filter == 'read' else 'btn-outline-primary' }}">
+            Read Archives
+        </a>
+    </div>
+
+    <form method="POST" action="{{ url_for('web.mark_all_read') }}">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-check2-all me-1"></i> Mark All as Read
+        </button>
+    </form>
+</div>
+
+<!-- Alert Cards Container -->
+<div class="card">
+    <div class="card-body p-0">
+        {% for alert in alerts %}
+        <div class="alert-row {{ 'unread' if not alert.is_read }}" id="alert-{{ alert.id }}">
+            <div class="d-flex align-items-start p-3 border-bottom">
+                <!-- Unread status indicator -->
+                <div class="me-3 mt-1">
+                    {% if not alert.is_read %}
+                    <span class="unread-dot" title="Unread Alert"></span>
+                    {% else %}
+                    <i class="bi bi-envelope-open text-muted" title="Read"></i>
+                    {% endif %}
+                </div>
+
+                <!-- Alert Details -->
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark font-mono" style="font-size: 0.72rem;">Alert #{{ alert.id }}</span>
+                            {% if alert.dispute %}
+                            <span class="severity-pill severity-{{ alert.dispute.severity }}">{{ alert.dispute.severity }}</span>
+                            <span class="status-pill status-{{ alert.dispute.status }}">{{ alert.dispute.status }}</span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted font-mono" style="font-size: 0.75rem;">
+                            <i class="bi bi-clock me-1"></i>{{ alert.created_at.strftime('%b %d, %Y at %H:%M UTC') if alert.created_at else 'Just now' }}
+                        </small>
+                    </div>
+
+                    <p class="mb-2 mt-2 text-dark {{ 'fw-bold' if not alert.is_read else 'fw-normal' }}" style="font-size: 0.9rem; line-height: 1.5;">
+                        {{ alert.message or 'Dispute alert trigger' }}
+                    </p>
+
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-1">
+                        <div class="d-flex align-items-center gap-2">
+                            {% if alert.dispute %}
+                            <a href="{{ url_for('web.dispute_detail', dispute_id=alert.dispute_id) }}"
+                               class="btn btn-sm btn-primary py-1 px-2" style="font-size: 0.78rem;">
+                                <i class="bi bi-file-earmark-text me-1"></i> Inspect Case Dossier #{{ alert.dispute_id }} &rarr;
+                            </a>
+                            {% endif %}
+                            
+                            <span class="badge bg-light text-secondary border font-mono" style="font-size: 0.72rem;">
+                                <i class="bi bi-send-check text-success me-1"></i> Dispatched: {{ alert.delivery_status }}
+                            </span>
+                        </div>
+
+                        {% if not alert.is_read %}
+                        <form method="POST" action="{{ url_for('web.mark_alert_read', alert_id=alert.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-link text-muted p-0 text-decoration-none" style="font-size: 0.78rem;">
+                                <i class="bi bi-check2 me-1"></i> Mark as Read
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-shield-check fs-1 text-success d-block mb-3"></i>
+            <h5 class="fw-bold">No Alerts in this Inbox</h5>
+            <p class="text-muted small">All active tracked properties and regions are clear.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="card-footer d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">Showing page {{ pagination.page }} of {{ pagination.pages }}</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.prev_num }}&read={{ read_filter }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&read={{ read_filter }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.next_num }}&read={{ read_filter }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

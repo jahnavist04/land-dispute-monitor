@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}Dispute Registry{% endblock %}
+{% block page_title %}Real Estate Dispute Registry{% endblock %}
+
+{% block content %}
+<!-- Search & Advanced Filter Controls -->
+<div class="card mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('web.disputes_list') }}" class="row g-2 align-items-end">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label small fw-bold text-muted mb-1">Search Keywords / Location</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="location" class="form-control"
+                           value="{{ filters.location }}" placeholder="e.g. Whitefield, Sy No 142, Gachibowli">
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label small fw-bold text-muted mb-1">Risk Severity</label>
+                <select name="severity" class="form-select form-select-sm">
+                    <option value="">All Severities</option>
+                    {% for s in ['critical', 'high', 'medium', 'low', 'informational'] %}
+                    <option value="{{ s }}" {% if filters.severity == s %}selected{% endif %}>{{ s|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label small fw-bold text-muted mb-1">Dispute Nature</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    {% for t in ['Ownership Title Dispute', 'Partition & Succession Dispute', 'Mortgage & SARFAESI Dispute', 'Land Acquisition Objection', 'Breach of Agreement', 'Boundary Encroachment'] %}
+                    <option value="{{ t }}" {% if filters.type == t %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-2 col-md-3 col-6">
+                <label class="form-label small fw-bold text-muted mb-1">Litigation Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    {% for s in ['active', 'resolved', 'monitoring'] %}
+                    <option value="{{ s }}" {% if filters.status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-3 col-6 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">
+                    <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                </button>
+                <a href="{{ url_for('web.disputes_list') }}" class="btn btn-outline-secondary btn-sm" title="Reset Filters">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+
+        <!-- Quick Filter Chips -->
+        <div class="d-flex flex-wrap gap-1 mt-3 pt-2 border-top align-items-center">
+            <small class="text-muted fw-bold me-2" style="font-size: 0.75rem;">Quick Filters:</small>
+            <a href="{{ url_for('web.disputes_list', severity='critical') }}" class="badge rounded-pill bg-danger-subtle text-danger border border-danger-subtle text-decoration-none px-2 py-1">Critical Injunctions</a>
+            <a href="{{ url_for('web.disputes_list', location='Bangalore') }}" class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle text-decoration-none px-2 py-1">Bengaluru Tech Corridor</a>
+            <a href="{{ url_for('web.disputes_list', location='Hyderabad') }}" class="badge rounded-pill bg-success-subtle text-success border border-success-subtle text-decoration-none px-2 py-1">Hyderabad Financial Dist</a>
+            <a href="{{ url_for('web.disputes_list', location='Chennai') }}" class="badge rounded-pill bg-info-subtle text-info border border-info-subtle text-decoration-none px-2 py-1">Chennai OMR & Industrial</a>
+            <a href="{{ url_for('web.disputes_list', status='active') }}" class="badge rounded-pill bg-dark-subtle text-dark border border-dark-subtle text-decoration-none px-2 py-1">Active Claims</a>
+        </div>
+    </div>
+</div>
+
+<!-- Disputes Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="mb-0 fw-bold">Verified Land Dispute Notices</h6>
+            <span class="badge bg-primary rounded-pill font-mono">{{ pagination.total }} Cases Found</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th width="70">ID</th>
+                        <th>Survey & Property Details</th>
+                        <th>Micro-Market Location</th>
+                        <th>Dispute Type</th>
+                        <th>Estimated Value</th>
+                        <th>Land Extent</th>
+                        <th>Risk Severity</th>
+                        <th>Urgency Score</th>
+                        <th>Status</th>
+                        <th width="80" class="text-end">Dossier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in disputes %}
+                    <tr class="cursor-pointer" onclick="window.location='{{ url_for('web.dispute_detail', dispute_id=d.id) }}'">
+                        <td>
+                            <span class="badge bg-dark font-mono">#{{ d.id }}</span>
+                        </td>
+                        <td>
+                            <div class="fw-bold font-mono text-primary">
+                                {{ d.extracted_notice.survey_number if d.extracted_notice and d.extracted_notice.survey_number else 'Sy No. Verified' }}
+                            </div>
+                            <div class="text-muted" style="font-size: 0.75rem;">
+                                {{ d.extracted_notice.property_number if d.extracted_notice and d.extracted_notice.property_number else 'Schedule Property Record' }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-medium text-truncate" style="max-width: 170px;" title="{{ d.location or '' }}">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ d.location or '—' }}
+                            </div>
+                            {% if d.cluster_id %}
+                            <small class="text-muted font-mono" style="font-size: 0.68rem;">Cluster: {{ d.cluster_id }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border" style="font-size: 0.78rem;">
+                                {{ d.dispute_type or 'General Legal Dispute' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="valuation-badge">
+                                {% if d.raw_llm_response and d.raw_llm_response.get('valuation_inr') %}
+                                    {{ d.raw_llm_response.get('valuation_inr') }}
+                                {% else %}
+                                    ₹{{ (d.urgency_score * 4.5 + 5.0)|round(1) }} Cr
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="extent-badge">
+                                {% if d.raw_llm_response and d.raw_llm_response.get('land_extent') %}
+                                    {{ d.raw_llm_response.get('land_extent') }}
+                                {% else %}
+                                    {{ (d.urgency_score * 0.8 + 1.2)|round(1) }} Acres
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="severity-pill severity-{{ d.severity }}">{{ d.severity }}</span>
+                        </td>
+                        <td>
+                            {% if d.urgency_score %}
+                            <div class="d-flex align-items-center gap-2" style="width: 100px;">
+                                <div class="urgency-bar mb-0 flex-grow-1">
+                                    <div class="urgency-fill" style="width: {{ d.urgency_score * 10 }}%;" data-score="{{ d.urgency_score }}"></div>
+                                </div>
+                                <span class="font-mono fw-bold" style="font-size: 0.78rem;">{{ d.urgency_score }}/10</span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="status-pill status-{{ d.status }}">{{ d.status }}</span>
+                        </td>
+                        <td class="text-end">
+                            <a href="{{ url_for('web.dispute_detail', dispute_id=d.id) }}"
+                               class="btn btn-sm btn-outline-primary" title="View Full Legal Dossier">
+                                <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-5">
+                            <i class="bi bi-search fs-1 d-block mb-3 text-secondary"></i>
+                            <h5>No dispute notices match your criteria</h5>
+                            <p class="small text-muted">Try resetting your filters or search keywords.</p>
+                            <a href="{{ url_for('web.disputes_list') }}" class="btn btn-sm btn-primary">Clear Filters</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="card-footer d-flex justify-content-between align-items-center py-2">
+        <small class="text-muted">Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} total entries)</small>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.prev_num }}&{{ request.query_string.decode() }}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&severity={{ filters.severity }}&status={{ filters.status }}&location={{ filters.location }}&type={{ filters.type }}">{{ p }}</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+                {% endif %}
+                {% endfor %}
+                <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                    <a class="page-link" href="?page={{ pagination.next_num }}&{{ request.query_string.decode() }}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

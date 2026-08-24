@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} | LandWatch — Land Dispute Intelligence</title>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom Modern CSS -->
+    <link rel="stylesheet" href="{{ url_for('web.static', filename='css/dashboard.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon">
+                <i class="bi bi-shield-shaded fs-5"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <span>LandWatch</span>
+                    <span class="brand-badge">AI 2.0</span>
+                </div>
+                <div style="font-size: 0.68rem; color: #64748b; font-weight: 500;">Legal Dispute Monitor</div>
+            </div>
+        </div>
+
+        <ul class="sidebar-nav">
+            <div class="nav-section-title">Core Intelligence</div>
+            <li class="nav-item">
+                <a href="{{ url_for('web.dashboard_home') }}"
+                   class="nav-link {% if request.endpoint == 'web.dashboard_home' %}active{% endif %}">
+                    <i class="bi bi-grid-1x2-fill"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('web.disputes_list') }}"
+                   class="nav-link {% if 'dispute' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-file-earmark-ruled-fill"></i>
+                    <span>Dispute Registry</span>
+                </a>
+            </li>
+
+            <div class="nav-section-title mt-3">Acquisition & OCR</div>
+            <li class="nav-item">
+                <a href="{{ url_for('web.sources_list') }}"
+                   class="nav-link {% if 'source' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-newspaper"></i>
+                    <span>Newspaper Feeds</span>
+                </a>
+            </li>
+
+            <div class="nav-section-title mt-3">Client Alerts</div>
+            <li class="nav-item">
+                <a href="{{ url_for('web.subscriptions_list') }}"
+                   class="nav-link {% if 'subscription' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-sliders2-vertical"></i>
+                    <span>Tracked Regions</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('web.alerts_list') }}"
+                   class="nav-link {% if 'alert' in request.endpoint %}active{% endif %}">
+                    <i class="bi bi-bell-fill"></i>
+                    <span>Alert Center</span>
+                    {% if unread_count %}
+                    <span class="badge bg-danger rounded-pill ms-auto" style="font-size: 0.7rem;">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="user-avatar">
+                    {{ current_user.name[:1] if current_user.is_authenticated else 'A' }}
+                </div>
+                <div class="overflow-hidden flex-grow-1">
+                    <div class="text-truncate fw-semibold" style="font-size: 0.85rem;">{{ current_user.name if current_user.is_authenticated else 'Admin' }}</div>
+                    <div class="text-truncate text-muted" style="font-size: 0.72rem;">{{ current_user.company or 'Enterprise Client' }}</div>
+                </div>
+                <a href="{{ url_for('web.logout') }}" class="text-secondary" title="Logout">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                </a>
+            </div>
+
+            <div class="pipeline-status-badge">
+                <span class="pulse-dot"></span>
+                <span>OCR Pipeline: <strong>Operational</strong></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <nav class="top-navbar">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-outline-secondary d-lg-none" onclick="toggleSidebar()">
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+                <div>
+                    <h5 class="mb-0 fw-bold">{% block page_title %}Dashboard{% endblock %}</h5>
+                    <small class="text-muted" style="font-size: 0.78rem;">Automated Real Estate Dispute Extraction & AI Analysis</small>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <!-- Search Bar -->
+                <form action="{{ url_for('web.disputes_list') }}" method="GET" class="d-none d-md-block" style="width: 280px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="location" class="form-control bg-light border-start-0" placeholder="Search Survey No, Location, Court...">
+                    </div>
+                </form>
+
+                <!-- Notifications -->
+                <a href="{{ url_for('web.alerts_list') }}" class="btn btn-light btn-sm rounded-circle position-relative p-2" title="Alerts">
+                    <i class="bi bi-bell fs-6"></i>
+                    {% if unread_count %}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" style="font-size: 0.65rem;">
+                        {{ unread_count }}
+                    </span>
+                    {% endif %}
+                </a>
+            </div>
+        </nav>
+
+        <!-- Flash Messages & Main View -->
+        <div class="content-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="mb-3">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show d-flex align-items-center gap-2 py-2" role="alert">
+                    <i class="bi bi-info-circle-fill"></i>
+                    <div>{{ message }}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.sidebar-toggle');
+            if (window.innerWidth < 992 && sidebar.classList.contains('show') &&
+                !sidebar.contains(e.target) && (!toggle || !toggle.contains(e.target))) {
+                sidebar.classList.remove('show');
+            }
+        });
+    </script>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('web.static', filename='js/dashboard.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

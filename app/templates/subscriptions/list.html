@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Tracked Regions & Subscriptions{% endblock %}
+{% block page_title %}Micro-Market & Property Tracking Preferences{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+        <p class="text-muted mb-0" style="font-size: 0.88rem;">
+            Real-time triggers dispatching instant webhook notifications and email briefs when disputes surface.
+        </p>
+    </div>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addSubModal">
+        <i class="bi bi-plus-lg me-1"></i> New Tracking Rule
+    </button>
+</div>
+
+<div class="row g-3">
+    {% for sub in subscriptions %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 {{ 'border-secondary opacity-75' if not sub.is_active }}">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-sliders2-vertical text-primary me-2"></i>
+                            Rule #{{ sub.id }}
+                        </h6>
+                        <small class="text-muted">Created: {{ sub.created_at.strftime('%b %d, %Y') if sub.created_at else 'Active' }}</small>
+                    </div>
+                    <span class="badge {{ 'bg-success-subtle text-success border border-success-subtle' if sub.is_active else 'bg-secondary-subtle text-secondary border' }}">
+                        {{ 'Active Tracking' if sub.is_active else 'Paused' }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted d-block fw-bold mb-1" style="font-size: 0.72rem; text-transform: uppercase;">Tracked Geographic Micro-Markets</small>
+                    {% if sub.tracked_regions %}
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for region in sub.tracked_regions %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1">
+                            <i class="bi bi-geo-alt me-1"></i>{{ region }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">All Pan-India Markets</span>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <small class="text-muted d-block fw-bold mb-1" style="font-size: 0.72rem; text-transform: uppercase;">Tracked Survey / Property Numbers</small>
+                    {% if sub.tracked_properties %}
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for prop in sub.tracked_properties %}
+                        <span class="badge bg-info-subtle text-info border border-info-subtle font-mono py-1">
+                            <i class="bi bi-file-earmark-text me-1"></i>{{ prop }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">All properties within market</span>
+                    {% endif %}
+                </div>
+
+                <div class="row g-2 p-2 bg-light rounded border mb-2">
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size: 0.7rem; text-transform: uppercase;">Min. Severity</small>
+                        <span class="severity-pill severity-{{ sub.min_severity }}" style="font-size: 0.7rem;">{{ sub.min_severity }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block" style="font-size: 0.7rem; text-transform: uppercase;">Notification Dispatch</small>
+                        <span class="small fw-semibold text-dark text-capitalize">
+                            <i class="bi bi-{{ 'globe' if sub.notification_method == 'webhook' else 'envelope-at' }} me-1"></i>
+                            {{ sub.notification_method }}
+                        </span>
+                    </div>
+                </div>
+
+                {% if sub.webhook_url %}
+                <div class="small text-truncate text-muted font-mono" style="font-size: 0.72rem;" title="{{ sub.webhook_url }}">
+                    <i class="bi bi-link-45deg me-1"></i>{{ sub.webhook_url }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-footer bg-transparent border-top d-flex gap-2 p-3">
+                <form method="POST" action="{{ url_for('web.toggle_subscription', sub_id=sub.id) }}" class="flex-fill">
+                    <button type="submit" class="btn btn-sm w-100 {{ 'btn-outline-warning' if sub.is_active else 'btn-outline-success' }}">
+                        <i class="bi {{ 'bi-pause-fill' if sub.is_active else 'bi-play-fill' }}"></i>
+                        {{ 'Pause Rule' if sub.is_active else 'Resume Rule' }}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('web.delete_subscription', sub_id=sub.id) }}">
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Deactivate this subscription?')">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal: Add Subscription -->
+<div class="modal fade" id="addSubModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('web.add_subscription') }}">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Create Tracking Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Micro-Market Regions</label>
+                        <input type="text" name="tracked_regions" class="form-control"
+                               placeholder="Bengaluru, Whitefield, Kokapet, Gachibowli">
+                        <small class="text-muted">Comma-separated region names to monitor.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Specific Survey / Khata Numbers</label>
+                        <input type="text" name="tracked_properties" class="form-control font-mono"
+                               placeholder="Sy No. 142/2, Sy No. 45/1A">
+                        <small class="text-muted">Comma-separated survey numbers for high-priority watchlist.</small>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Trigger Sensitivity</label>
+                            <select name="min_severity" class="form-select">
+                                <option value="informational">Informational (All)</option>
+                                <option value="low">Low & Above</option>
+                                <option value="medium" selected>Medium & Above</option>
+                                <option value="high">High & Above</option>
+                                <option value="critical">Critical Injunctions Only</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Delivery Method</label>
+                            <select name="notification_method" class="form-select" id="notifMethod">
+                                <option value="email">Email Briefing</option>
+                                <option value="webhook">Signed Webhook (JSON)</option>
+                                <option value="both" selected>Both (Email + Webhook)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3" id="webhookField">
+                        <label class="form-label fw-semibold small">Webhook Endpoint URL</label>
+                        <input type="url" name="webhook_url" class="form-control font-mono small"
+                               placeholder="https://api.yourdomain.com/webhooks/land-disputes">
+                        <small class="text-muted">Payloads signed with HMAC-SHA256.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-bell-fill me-1"></i> Save Tracking Rule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
