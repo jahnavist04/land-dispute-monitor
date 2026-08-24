@@ -1,4 +1,5 @@
 import logging
+import os
 from flask import Flask, request
 from flask_login import current_user, login_user
 from app.config import DevelopmentConfig, ProductionConfig, TestingConfig
@@ -33,9 +34,24 @@ def create_app(config_name='development'):
     @app.before_request
     def auto_login_web_user():
         """Use the first active client for the public dashboard experience."""
-        if request.path.startswith('/api/') or current_user.is_authenticated:
+        if request.path == '/api/health' or request.path.startswith('/api/'):
+            return
+
+        if os.environ.get('VERCEL'):
+            db.create_all()
+
+        if current_user.is_authenticated:
             return
         guest = Client.query.filter_by(is_active=True).order_by(Client.id).first()
+        if not guest:
+            guest = Client(
+                name='LandWatch Demo Client',
+                email='demo@landwatch.local',
+                company='LandWatch'
+            )
+            guest.set_password('demo-access')
+            db.session.add(guest)
+            db.session.commit()
         if guest:
             login_user(guest, remember=False)
         
